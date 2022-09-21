@@ -85,7 +85,7 @@ aresta find_best_edge(vector<vector<pair<int,int>>>grafo, Floresta &f, list<int>
     for(auto node : arvore){
     //olha todas arestas ligadas a este node
         for (auto a : grafo[node]){
-            int vizinho = a.first;
+            int vizinho           = a.first;
             int peso_node_vizinho = a.second;
             
             //apenas arestas que ligam a arvore a outra

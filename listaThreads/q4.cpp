@@ -3,19 +3,12 @@
 #include <list>
 #include<pthread.h>
 
-struct argumento {
-    vector<vector<pair<int,int>>>grafo;
-    Floresta &f;
-    list<int>&arvore;
-    int node;
-    vector<aresta> best_edges;
-};
-
 #define INFINITY 1000
 
 using namespace std;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 void print(vector<int>& A){
     for( auto && a : A){
@@ -32,8 +25,7 @@ class Floresta{
         vector<int> rank;
         vector<list<int>> arvore;
 
-        Floresta(int n_nodes){
-            
+        void Floresta_init(int n_nodes){
             n_arvores = n_nodes;
             pai.resize(n_nodes);
             rank.resize(n_nodes);
@@ -87,14 +79,12 @@ struct aresta{
     }
 };
 
+Floresta f; //criar conjunto de arvores (floresta)
+list<int> arvore;
+vector<vector<pair<int,int>>> grafo;
+
 void* find_best_edge(void* args){
-    
-    //casting do argumento
-    vector<vector<pair<int,int>>> grafo = ((argumento*)args)->grafo;
-    Floresta f = ((argumento*)args)->f;
-    list<int>arvore = ((argumento*)args)->arvore;
-    int node = ((argumento*)args)->node;
-    vector<aresta> best_edges = ((argumento*)args)->best_edges;
+    int node  = *(int*)args;
 
     struct aresta best_edge(INFINITY);
 
@@ -117,6 +107,7 @@ void* find_best_edge(void* args){
             
         }
     }
+    pthread_exit(NULL);
 }
 
 vector<aresta> find_best_edges(vector<vector<pair<int,int>>>grafo, Floresta &f, vector<aresta> &mst){
@@ -124,9 +115,16 @@ vector<aresta> find_best_edges(vector<vector<pair<int,int>>>grafo, Floresta &f, 
     vector<aresta> best_edges;
     for (int node = 0; node < n_nodes; node++){
 
-        pthread_t threads[node];
+        pthread_t threads[n_nodes];
+        for(int i = 0; i < n_nodes; i++){
+            int * node = (int*) malloc(sizeof(int));
+            pthread_create(threads, NULL, find_best_edge, node);
+        }
 
-        //achando raiz que representa a arvore
+        for(int i = 0; i < n_nodes; i++){
+            pthread_join(threads[i], NULL);
+        }
+        
     }
     return best_edges;
         
@@ -137,8 +135,6 @@ vector <aresta> boruvka(vector<vector<pair<int,int>>>grafo){
      
     int n_nodes = grafo.size();
 
-    Floresta f(n_nodes);//criar conjunto de arvores (floresta)
-   
     //enquanto numero de arvores  > 1:
     while (f.n_arvores >  1){
         //achar melhor edge para cada arvore
@@ -160,15 +156,7 @@ vector <aresta> boruvka(vector<vector<pair<int,int>>>grafo){
 }
 
 int main() {
-    /* Let us create the following graph
-       2   3
-   (0)--(1)--(2) 
-    |      /  |       
-   6|   (8)   |7       
-    |  /      |       
-   (3)-------(4)
-        9     */
-    int V = 5;
+
     vector<vector<pair<int,int>>> graph = {
                                             {make_pair(1,2),make_pair(3,6)},  //0
                                             {make_pair(0,2),make_pair(2,3)},//1
@@ -176,6 +164,10 @@ int main() {
                                             {make_pair(0,6),make_pair(2,8),make_pair(4,9)},//3
                                             {make_pair(3,9),make_pair(2,7)}//4
                                           };
+
+    
+    f.Floresta_init(graph.size());
+
     vector<aresta> mst = boruvka(graph);
 
     pthread_t * threads = NULL;
